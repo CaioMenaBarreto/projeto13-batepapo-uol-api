@@ -108,21 +108,15 @@ app.post("/messages", async (req, res) => {
 
         res.sendStatus(201);
 
-        if (type === "private_message") {
-            const privateMessage = {
-                from,
-                to,
-                text,
-                type,
-                time: dayjs().format("HH:mm:ss"),
-            };
-            await db.collection("messages").insertOne(privateMessage);
-        }
     } catch (error) {
+
         console.log(error);
         res.sendStatus(500);
+
     }
 });
+
+
 
 
 app.get("/messages", async (req, res) => {
@@ -135,31 +129,27 @@ app.get("/messages", async (req, res) => {
             return;
         }
 
+        let messagesQuery = {
+            $or: [
+                { to: "Todos" },
+                { from: "Todos" },
+                { to: user },
+                { from: user }
+            ]
+        };
+
         let messages;
+
         if (limit) {
             messages = await db.collection("messages")
-                .find({
-                    $or: [
-                        { to: "Todos" },
-                        { from: "Todos" },
-                        { to: user },
-                        { from: user }
-                    ]
-                })
-                .sort({ _id: -1 })
+                .find(messagesQuery)
+                .sort({ _id: 1 })
                 .limit(parseInt(limit))
                 .toArray();
         } else {
             messages = await db.collection("messages")
-                .find({
-                    $or: [
-                        { to: "Todos" },
-                        { from: "Todos" },
-                        { to: user },
-                        { from: user }
-                    ]
-                })
-                .sort({ _id: -1 })
+                .find(messagesQuery)
+                .sort({ _id: 1 })
                 .toArray();
         }
 
@@ -169,7 +159,27 @@ app.get("/messages", async (req, res) => {
         res.sendStatus(500);
     }
 });
+app.post("/status", async (req, res) => {
+    try{
+        const user = req.headers.user;
 
+        if(!user){
+            return res.sendStatus(404);
+        }
+
+        const participant = await db.collection("participants").findOne({ name: user });
+        if(!participant){
+            return res.sendStatus(404);
+        }
+
+    await db.collection("participants").updateOne({ name: user }, {$set: { lastStatus: Date.now() }});
+    res.sendStatus(200);
+
+    } catch(error) {
+        console.log(error);
+        res.sendStatus(500);
+    };
+})
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
