@@ -97,7 +97,7 @@ app.post("/messages", async (req, res) => {
         }
 
         const message = {
-            name: from,
+            from,
             to,
             text,
             type,
@@ -107,12 +107,23 @@ app.post("/messages", async (req, res) => {
         await db.collection("messages").insertOne(message);
 
         res.sendStatus(201);
+
+        if (type === "private_message") {
+            const privateMessage = {
+                from,
+                to,
+                text,
+                type,
+                time: dayjs().format("HH:mm:ss"),
+            };
+            await db.collection("messages").insertOne(privateMessage);
+        }
     } catch (error) {
         console.log(error);
         res.sendStatus(500);
     }
-
 });
+
 
 app.get("/messages", async (req, res) => {
     try {
