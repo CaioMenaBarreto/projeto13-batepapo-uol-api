@@ -179,7 +179,28 @@ app.post("/status", async (req, res) => {
         console.log(error);
         res.sendStatus(500);
     };
-})
+});
+
+setInterval( async () => {
+    try {
+        const participants = await db.collection("participants").find({lastStatus: { $lte: Date.now() - 10000 }}).toArray();
+
+        participants.forEach( async (user) => {
+            await db.collection("messages").insertOne({
+                from: user.name,
+                to: 'Todos',
+                text: `sai da sala...`,
+                type: 'status',
+                time: dayjs().format('HH:mm:ss')
+            });
+
+            db.collection("participants").deleteOne({ name: user.name });
+        });
+        
+    } catch(error) {
+        console.log(error);
+    }
+}, 15000);
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`Servidor rodando na porta ${PORT}`));
